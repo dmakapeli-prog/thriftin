@@ -45,8 +45,10 @@ export default function AdminPage() {
     try {
       const data = await getProducts()
       setProducts(data || [])
-    } catch (e) {
-      showToast('Gagal memuat produk!')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('Load error:', msg)
+      showToast(`Gagal memuat produk: ${msg}`)
     }
     setLoading(false)
   }
@@ -124,8 +126,10 @@ export default function AdminPage() {
       }
       setShowForm(false)
       loadProducts()
-    } catch (e) {
-      showToast('❌ Gagal menyimpan produk!')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('Save error:', msg)
+      showToast(`❌ Gagal: ${msg}`)
     }
     setSaving(false)
   }
@@ -136,8 +140,10 @@ export default function AdminPage() {
       await deleteProduct(id)
       showToast('🗑️ Produk dihapus!')
       loadProducts()
-    } catch {
-      showToast('❌ Gagal menghapus!')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('Delete error:', msg)
+      showToast(`❌ Gagal hapus: ${msg}`)
     }
   }
 
