@@ -8,12 +8,3 @@ export interface Product {
   rating: number
   category: string[]
 }
-
-export interface ThriftContextType {
-  activeFilter: string
-  setActiveFilter: (filter: string) => void
-  cartCount: number
-  setCartCount: (count: number) => void
-  searchQuery: string
-  setSearchQuery: (query: string) => void
-}

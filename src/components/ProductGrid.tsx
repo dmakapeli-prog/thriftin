@@ -6,9 +6,8 @@ import ProductCard from './ProductCard'
 import ChatBox from './ChatBox'
 
 export default function ProductGrid() {
-  const { activeFilter, cartCount, setCartCount, searchQuery } = useThrift()
+  const { activeFilter, searchQuery } = useThrift()
   const [showChat, setShowChat] = useState(false)
-  const [showToast, setShowToast] = useState(false)
   const [filtered, setFiltered] = useState(products)
 
   useEffect(() => {
@@ -22,12 +21,6 @@ export default function ProductGrid() {
     setFiltered(result)
   }, [activeFilter, searchQuery])
 
-  const handleAddToCart = () => {
-    setCartCount(cartCount + 1)
-    setShowToast(true)
-    setTimeout(() => setShowToast(false), 3000)
-  }
-
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '25px', marginBottom: '40px' }}>
@@ -38,7 +31,7 @@ export default function ProductGrid() {
           </div>
         ) : (
           filtered.map(product => (
-            <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
+            <ProductCard key={product.id} product={product} />
           ))
         )}
       </div>
@@ -51,10 +44,6 @@ export default function ProductGrid() {
       </button>
 
       <ChatBox isOpen={showChat} onClose={() => setShowChat(false)} />
-
-      <div style={{ position: 'fixed', bottom: showToast ? '30px' : '-100px', left: '50%', transform: 'translateX(-50%)', background: '#4CAF50', color: 'white', padding: '12px 25px', borderRadius: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', transition: 'bottom 0.3s', zIndex: 1000, fontWeight: 500, whiteSpace: 'nowrap' }}>
-        Produk ditambahkan ke keranjang!
-      </div>
     </>
   )
 }
