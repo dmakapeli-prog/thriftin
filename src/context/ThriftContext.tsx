@@ -1,8 +1,23 @@
 "use client"
 import { createContext, useContext, useState, ReactNode } from 'react'
-import { ThriftContextType } from '@/types'
 
-const ThriftContext = createContext<ThriftContextType | null>(null)
+interface ThriftContextType {
+  activeFilter: string
+  setActiveFilter: (filter: string) => void
+  cartCount: number
+  setCartCount: (count: number) => void
+  searchQuery: string
+  setSearchQuery: (query: string) => void
+}
+
+const ThriftContext = createContext<ThriftContextType>({
+  activeFilter: 'Semua',
+  setActiveFilter: () => {},
+  cartCount: 0,
+  setCartCount: () => {},
+  searchQuery: '',
+  setSearchQuery: () => {},
+})
 
 export function ThriftProvider({ children }: { children: ReactNode }) {
   const [activeFilter, setActiveFilter] = useState('Semua')
@@ -10,14 +25,14 @@ export function ThriftProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   return (
-    <ThriftContext.Provider value={{ activeFilter, setActiveFilter, cartCount, setCartCount, searchQuery, setSearchQuery }}>
+    <ThriftContext.Provider value={{
+      activeFilter, setActiveFilter,
+      cartCount, setCartCount,
+      searchQuery, setSearchQuery
+    }}>
       {children}
     </ThriftContext.Provider>
   )
 }
 
-export function useThrift() {
-  const ctx = useContext(ThriftContext)
-  if (!ctx) throw new Error('useThrift must be used within ThriftProvider')
-  return ctx
-}
+export const useThrift = () => useContext(ThriftContext)
