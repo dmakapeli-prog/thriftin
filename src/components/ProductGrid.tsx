@@ -1,40 +1,88 @@
 "use client"
 import { useState, useEffect } from 'react'
 import { useThrift } from '@/context/ThriftContext'
-import { products } from '@/data/products'
+import { getProducts } from '@/lib/products'
 import ProductCard from './ProductCard'
 import ChatBox from './ChatBox'
+
+interface Product {
+  id: number
+  name: string
+  price: string
+  raw_price: number
+  image_url: string
+  condition: string
+  rating: number
+  category: string[]
+  stok: number
+}
 
 export default function ProductGrid() {
   const { activeFilter, searchQuery } = useThrift()
   const [showChat, setShowChat] = useState(false)
-  const [filtered, setFiltered] = useState(products)
+  const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [filtered, setFiltered] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let result = [...products]
+    async function load() {
+      setLoading(true)
+      try {
+        const data = await getProducts()
+        setAllProducts(data || [])
+      } catch {
+        console.error('Gagal load produk')
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  useEffect(() => {
+    let result = [...allProducts]
     if (activeFilter !== 'Semua' && activeFilter !== 'Harga') {
-      result = result.filter(p => p.category.includes(activeFilter))
+      result = result.filter(p => (p.category || []).includes(activeFilter))
     }
     if (searchQuery.trim()) {
       result = result.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
     }
     setFiltered(result)
-  }, [activeFilter, searchQuery])
+  }, [activeFilter, searchQuery, allProducts])
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '25px', marginBottom: '40px' }}>
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#666', gridColumn: '1 / -1' }}>
-            <h3>Produk tidak ditemukan</h3>
-            <p style={{ marginTop: '8px' }}>Coba gunakan kata kunci atau filter lain.</p>
-          </div>
-        ) : (
-          filtered.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))
-        )}
-      </div>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: '#7C3AED', fontSize: '16px' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>⏳</div>
+          Memuat produk...
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '25px', marginBottom: '40px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666', gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔍</div>
+              <h3>Produk tidak ditemukan</h3>
+              <p style={{ marginTop: '8px' }}>Coba gunakan kata kunci atau filter lain.</p>
+            </div>
+          ) : (
+            filtered.map(product => (
+              <ProductCard
+                key={product.id}
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  rawPrice: product.raw_price,
+                  image: product.image_url,
+                  condition: `Condition: ${product.condition}`,
+                  rating: product.rating,
+                  category: product.category || []
+                }}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       <button
         onClick={() => setShowChat(!showChat)}
