@@ -1,6 +1,8 @@
 "use client"
 import { useState, useEffect } from 'react'
 import { getProducts, createProduct, updateProduct, deleteProduct, uploadImage } from '@/lib/products'
+import { getOrders, updateOrderStatus } from '@/lib/orders'
+import { getOffers, updateOfferStatus } from '@/lib/offers'
 
 interface Product {
   id: number
@@ -38,7 +40,18 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
+  const [activeTab, setActiveTab] = useState<'produk' | 'pesanan' | 'tawaran'>('produk')
+  const [orders, setOrders] = useState<any[]>([])
+  const [offers, setOffers] = useState<any[]>([])
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const [loadingOffers, setLoadingOffers] = useState(true)
+
   useEffect(() => { loadProducts() }, [])
+
+  useEffect(() => {
+    loadOrders()
+    loadOffers()
+  }, [])
 
   async function loadProducts() {
     setLoading(true)
@@ -53,9 +66,47 @@ export default function AdminPage() {
     setLoading(false)
   }
 
+  async function loadOrders() {
+    setLoadingOrders(true)
+    try {
+      const data = await getOrders()
+      setOrders(data || [])
+    } catch { }
+    setLoadingOrders(false)
+  }
+
+  async function loadOffers() {
+    setLoadingOffers(true)
+    try {
+      const data = await getOffers()
+      setOffers(data || [])
+    } catch { }
+    setLoadingOffers(false)
+  }
+
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
+  }
+
+  async function handleUpdateOrderStatus(id: number, status: string) {
+    try {
+      await updateOrderStatus(id, status)
+      showToast(`✅ Status order #${id} diubah jadi ${status}`)
+      loadOrders()
+    } catch {
+      showToast('❌ Gagal update status')
+    }
+  }
+
+  async function handleUpdateOfferStatus(id: number, status: string) {
+    try {
+      await updateOfferStatus(id, status)
+      showToast(`✅ Penawaran ${status === 'Diterima' ? 'diterima' : 'ditolak'}`)
+      loadOffers()
+    } catch {
+      showToast('❌ Gagal update penawaran')
+    }
   }
 
   function openAdd() {
@@ -163,76 +214,226 @@ export default function AdminPage() {
         >+ Tambah Produk</button>
       </div>
 
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #EEEEEE', display: 'flex', gap: '4px', padding: '0 24px', maxWidth: '1200px', margin: '0 auto' }}>
+        {[
+          { key: 'produk', label: '📦 Produk', count: products.length },
+          { key: 'pesanan', label: '🧾 Pesanan Masuk', count: orders.filter(o => o.status === 'Pending').length },
+          { key: 'tawaran', label: '💬 Tawaran Harga', count: offers.filter(o => o.status === 'Pending').length },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as any)}
+            style={{
+              padding: '14px 20px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === tab.key ? '3px solid #7C3AED' : '3px solid transparent',
+              color: activeTab === tab.key ? '#7C3AED' : '#666',
+              fontWeight: activeTab === tab.key ? 700 : 500,
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {tab.label}
+            {tab.count > 0 && (
+              <span style={{ backgroundColor: '#FF4D4F', color: 'white', fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '10px' }}>{tab.count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
 
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-          {[
-            { label: 'Total Produk', value: products.length, icon: '📦' },
-            { label: 'Total Stok', value: products.reduce((s, p) => s + (p.stok || 0), 0), icon: '🏷️' },
-            { label: 'Stok Habis', value: products.filter(p => p.stok === 0).length, icon: '⚠️' },
-          ].map(stat => (
-            <div key={stat.label} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#7C3AED' }}>{stat.value}</div>
-              <div style={{ fontSize: '14px', color: '#666' }}>{stat.label}</div>
+        {activeTab === 'produk' && (
+          <>
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+              {[
+                { label: 'Total Produk', value: products.length, icon: '📦' },
+                { label: 'Total Stok', value: products.reduce((s, p) => s + (p.stok || 0), 0), icon: '🏷️' },
+                { label: 'Stok Habis', value: products.filter(p => p.stok === 0).length, icon: '⚠️' },
+              ].map(stat => (
+                <div key={stat.label} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#7C3AED' }}>{stat.value}</div>
+                  <div style={{ fontSize: '14px', color: '#666' }}>{stat.label}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Product Table */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #EEEEEE' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Daftar Produk</h2>
-          </div>
-          {loading ? (
-            <div style={{ padding: '60px', textAlign: 'center', color: '#7C3AED', fontSize: '16px' }}>Memuat produk...</div>
-          ) : products.length === 0 ? (
-            <div style={{ padding: '60px', textAlign: 'center', color: '#999' }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
-              <p>Belum ada produk. Tambahkan produk pertama kamu!</p>
+            {/* Product Table */}
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #EEEEEE' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Daftar Produk</h2>
+              </div>
+              {loading ? (
+                <div style={{ padding: '60px', textAlign: 'center', color: '#7C3AED', fontSize: '16px' }}>Memuat produk...</div>
+              ) : products.length === 0 ? (
+                <div style={{ padding: '60px', textAlign: 'center', color: '#999' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
+                  <p>Belum ada produk. Tambahkan produk pertama kamu!</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#F9F8FF' }}>
+                        {['Foto', 'Nama Produk', 'Harga', 'Kondisi', 'Stok', 'Kategori', 'Aksi'].map(h => (
+                          <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#666', borderBottom: '1px solid #EEEEEE' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map(p => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #F5F5F5' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#FAFAFA'}
+                          onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'white'}
+                        >
+                          <td style={{ padding: '12px 16px' }}>
+                            <img src={p.image_url || 'https://via.placeholder.com/60'} alt={p.name} style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #EEEEEE' }} />
+                          </td>
+                          <td style={{ padding: '12px 16px', fontWeight: 600, fontSize: '14px', maxWidth: '200px' }}>{p.name}</td>
+                          <td style={{ padding: '12px 16px', color: '#7C3AED', fontWeight: 700, fontSize: '14px' }}>{p.price}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ backgroundColor: '#EDE9FE', color: '#7C3AED', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>{p.condition}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ color: p.stok === 0 ? '#FF4D4F' : '#333', fontWeight: 600, fontSize: '14px' }}>{p.stok === 0 ? '⚠️ Habis' : p.stok}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '12px', color: '#666' }}>{(p.category || []).join(', ')}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button onClick={() => openEdit(p)} style={{ backgroundColor: '#EDE9FE', color: '#7C3AED', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>✏️ Edit</button>
+                              <button onClick={() => handleDelete(p.id, p.name)} style={{ backgroundColor: '#FFF0F0', color: '#FF4D4F', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>🗑️ Hapus</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#F9F8FF' }}>
-                    {['Foto', 'Nama Produk', 'Harga', 'Kondisi', 'Stok', 'Kategori', 'Aksi'].map(h => (
-                      <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#666', borderBottom: '1px solid #EEEEEE' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map(p => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #F5F5F5' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#FAFAFA'}
-                      onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'white'}
-                    >
-                      <td style={{ padding: '12px 16px' }}>
-                        <img src={p.image_url || 'https://via.placeholder.com/60'} alt={p.name} style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #EEEEEE' }} />
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, fontSize: '14px', maxWidth: '200px' }}>{p.name}</td>
-                      <td style={{ padding: '12px 16px', color: '#7C3AED', fontWeight: 700, fontSize: '14px' }}>{p.price}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ backgroundColor: '#EDE9FE', color: '#7C3AED', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>{p.condition}</span>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ color: p.stok === 0 ? '#FF4D4F' : '#333', fontWeight: 600, fontSize: '14px' }}>{p.stok === 0 ? '⚠️ Habis' : p.stok}</span>
-                      </td>
-                      <td style={{ padding: '12px 16px', fontSize: '12px', color: '#666' }}>{(p.category || []).join(', ')}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => openEdit(p)} style={{ backgroundColor: '#EDE9FE', color: '#7C3AED', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>✏️ Edit</button>
-                          <button onClick={() => handleDelete(p.id, p.name)} style={{ backgroundColor: '#FFF0F0', color: '#FF4D4F', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>🗑️ Hapus</button>
+          </>
+        )}
+
+        {activeTab === 'pesanan' && (
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #EEEEEE' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>🧾 Pesanan Masuk</h2>
+            </div>
+            {loadingOrders ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#7C3AED' }}>Memuat pesanan...</div>
+            ) : orders.length === 0 ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#999' }}>
+                <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
+                <p>Belum ada pesanan masuk.</p>
+              </div>
+            ) : (
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {orders.map(order => (
+                  <div key={order.id} style={{ border: '1px solid #EEEEEE', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '15px' }}>Order #{order.id} — {order.customer_name}</div>
+                        <div style={{ fontSize: '13px', color: '#999', marginTop: '2px' }}>
+                          {new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>📍 {order.customer_address}</div>
+                        <div style={{ fontSize: '13px', color: '#666', marginTop: '2px' }}>💳 {order.payment_method}</div>
+                      </div>
+                      <div style={{ fontWeight: 700, color: '#7C3AED', fontSize: '16px' }}>Rp {order.total.toLocaleString('id-ID')}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      {order.items?.map((item: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F9F8FF', padding: '4px 8px', borderRadius: '6px' }}>
+                          <img src={item.image} alt={item.name} style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px' }} />
+                          <span style={{ fontSize: '12px' }}>{item.name} x{item.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: '#666' }}>Status:</span>
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #EEEEEE', fontSize: '13px', fontWeight: 600, color: '#7C3AED', backgroundColor: '#F9F8FF', cursor: 'pointer' }}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Diproses">Diproses</option>
+                        <option value="Dikirim">Dikirim</option>
+                        <option value="Selesai">Selesai</option>
+                        <option value="Dibatalkan">Dibatalkan</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'tawaran' && (
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #EEEEEE' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>💬 Tawaran Harga</h2>
             </div>
-          )}
-        </div>
+            {loadingOffers ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#7C3AED' }}>Memuat tawaran...</div>
+            ) : offers.length === 0 ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#999' }}>
+                <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
+                <p>Belum ada tawaran harga masuk.</p>
+              </div>
+            ) : (
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {offers.map(offer => (
+                  <div key={offer.id} style={{ border: '1px solid #EEEEEE', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '15px' }}>{offer.product_name}</div>
+                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>Dari: {offer.customer_name}</div>
+                      <div style={{ fontSize: '13px', color: '#999', marginTop: '2px' }}>
+                        {new Date(offer.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 700, color: '#7C3AED', fontSize: '18px' }}>
+                      Rp {offer.offer_price.toLocaleString('id-ID')}
+                    </div>
+                    <div>
+                      {offer.status === 'Pending' ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => handleUpdateOfferStatus(offer.id, 'Diterima')}
+                            style={{ padding: '8px 14px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                            ✅ Terima
+                          </button>
+                          <button onClick={() => handleUpdateOfferStatus(offer.id, 'Ditolak')}
+                            style={{ padding: '8px 14px', backgroundColor: '#FF4D4F', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                            ❌ Tolak
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          backgroundColor: offer.status === 'Diterima' ? '#E8F5E9' : '#FFEBEE',
+                          color: offer.status === 'Diterima' ? '#4CAF50' : '#FF4D4F'
+                        }}>
+                          {offer.status === 'Diterima' ? '✅ Diterima' : '❌ Ditolak'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Form Modal */}
