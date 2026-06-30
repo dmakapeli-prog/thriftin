@@ -46,6 +46,12 @@ export default function Navbar() {
             <i className="far fa-heart"></i>
           </button>
 
+          {/* Review link */}
+          <button onClick={() => router.push('/review')}
+            style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Beri Ulasan">
+            <i className="far fa-star"></i>
+          </button>
+
           {/* Orders link */}
           <button onClick={() => router.push('/orders')}
             style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Riwayat Order">

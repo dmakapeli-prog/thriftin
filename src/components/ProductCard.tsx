@@ -4,6 +4,8 @@ import { Product } from '@/types'
 import { useThrift } from '@/context/ThriftContext'
 import { createOffer } from '@/lib/offers'
 import { addToWishlist, removeFromWishlist, isInWishlist } from '@/lib/wishlist'
+import ReviewSection from './ReviewSection'
+import { getProductAvgRating } from '@/lib/reviews'
 import { useRouter } from 'next/navigation'
 
 interface Props {
@@ -16,6 +18,8 @@ export default function ProductCard({ product }: Props) {
   const [wishlist, setWishlist] = useState(false)
   const [wishlistLoading, setWishlistLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showReviews, setShowReviews] = useState(false)
+  const [dynamicRating, setDynamicRating] = useState({ avg: product.rating, count: 0 })
   const [offerValue, setOfferValue] = useState('')
   const [offerName, setOfferName] = useState('')
   const [showToast, setShowToast] = useState(false)
@@ -25,6 +29,9 @@ export default function ProductCard({ product }: Props) {
 
   useEffect(() => {
     isInWishlist(product.id).then(setWishlist)
+    getProductAvgRating(product.id).then(result => {
+      if (result.count > 0) setDynamicRating(result)
+    })
   }, [product.id])
 
   async function handleToggleWishlist() {
@@ -107,8 +114,8 @@ export default function ProductCard({ product }: Props) {
         <div style={{ padding: '15px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '5px', color: '#333' }}>{product.name}</div>
           <div style={{ fontSize: '18px', fontWeight: 700, color: '#7C3AED', marginBottom: '8px' }}>{product.price}</div>
-          <div style={{ fontSize: '13px', color: '#FFB800', marginBottom: '12px' }}>
-            <i className="fas fa-star"></i> {product.rating} <span style={{ color: '#666', marginLeft: '5px' }}>/ 5</span>
+          <div onClick={() => setShowReviews(true)} style={{ fontSize: '13px', color: '#FFB800', marginBottom: '12px', cursor: 'pointer' }}>
+            <i className="fas fa-star"></i> {dynamicRating.avg || product.rating} <span style={{ color: '#666', marginLeft: '5px' }}>/ 5 {dynamicRating.count > 0 && `(${dynamicRating.count} ulasan)`}</span>
           </div>
 
           <button onClick={handleBeliSekarang}
@@ -184,6 +191,8 @@ export default function ProductCard({ product }: Props) {
           </div>
         </div>
       )}
+
+      {showReviews && <ReviewSection productId={product.id} onClose={() => setShowReviews(false)} />}
     </>
   )
 }
