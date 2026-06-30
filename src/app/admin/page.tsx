@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { getProducts, createProduct, updateProduct, deleteProduct, uploadImage } from '@/lib/products'
 import { getOrders, updateOrderStatus } from '@/lib/orders'
 import { getOffers, updateOfferStatus } from '@/lib/offers'
+import { getAllSessions, sendMessage, subscribeMessages } from '@/lib/messages'
+import { supabase } from '@/lib/supabase'
 
 interface Product {
   id: number
@@ -40,17 +42,39 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
-  const [activeTab, setActiveTab] = useState<'produk' | 'pesanan' | 'tawaran'>('produk')
+  const [activeTab, setActiveTab] = useState<'produk' | 'pesanan' | 'tawaran' | 'chat'>('produk')
   const [orders, setOrders] = useState<any[]>([])
   const [offers, setOffers] = useState<any[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [loadingOffers, setLoadingOffers] = useState(true)
+
+  const [allMessages, setAllMessages] = useState<any[]>([])
+  const [selectedSession, setSelectedSession] = useState<string | null>(null)
+  const [adminInput, setAdminInput] = useState('')
+  const [loadingChat, setLoadingChat] = useState(true)
 
   useEffect(() => { loadProducts() }, [])
 
   useEffect(() => {
     loadOrders()
     loadOffers()
+  }, [])
+
+  useEffect(() => {
+    loadAllMessages()
+    const channel = subscribeMessages('admin-listen-all', () => {})
+    
+    const globalChannel = supabase
+      .channel('admin-all-messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+        setAllMessages(prev => [...prev, payload.new])
+      })
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+      globalChannel.unsubscribe()
+    }
   }, [])
 
   async function loadProducts() {
@@ -82,6 +106,23 @@ export default function AdminPage() {
       setOffers(data || [])
     } catch { }
     setLoadingOffers(false)
+  }
+
+  async function loadAllMessages() {
+    setLoadingChat(true)
+    try {
+      const data = await getAllSessions()
+      setAllMessages(data || [])
+    } catch { }
+    setLoadingChat(false)
+  }
+
+  async function handleAdminReply() {
+    if (!adminInput.trim() || !selectedSession) return
+    try {
+      await sendMessage('Penjual', adminInput, selectedSession, 'manual')
+      setAdminInput('')
+    } catch { }
   }
 
   function showToast(msg: string) {
@@ -198,6 +239,13 @@ export default function AdminPage() {
     }
   }
 
+  const manualSessions = Array.from(new Set(allMessages.filter(m => m.mode === 'manual' && m.session_id).map(m => m.session_id)))
+  const unrepliedChatCount = manualSessions.filter(sid => {
+    const sessionMsgs = allMessages.filter(m => m.session_id === sid).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    const lastMsg = sessionMsgs[sessionMsgs.length - 1]
+    return lastMsg && (lastMsg.sender === 'Customer' || lastMsg.sender === 'System')
+  }).length
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F5F3FF', fontFamily: 'Inter, sans-serif' }}>
       
@@ -219,6 +267,7 @@ export default function AdminPage() {
           { key: 'produk', label: '📦 Produk', count: products.length },
           { key: 'pesanan', label: '🧾 Pesanan Masuk', count: orders.filter(o => o.status === 'Pending').length },
           { key: 'tawaran', label: '💬 Tawaran Harga', count: offers.filter(o => o.status === 'Pending').length },
+          { key: 'chat', label: '💬 Chat Customer', count: unrepliedChatCount },
         ].map(tab => (
           <button
             key={tab.key}
@@ -429,6 +478,100 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'chat' && (
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #EEEEEE' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>💬 Chat Customer</h2>
+            </div>
+            {loadingChat ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#7C3AED' }}>Memuat chat...</div>
+            ) : manualSessions.length === 0 ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#999' }}>
+                <div style={{ fontSize: '48px', marginBottom: '12px' }}>💬</div>
+                <p>Belum ada chat customer yang eskalasi ke penjual.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', minHeight: '450px', borderTop: '1px solid #EEEEEE' }}>
+                {/* Kolom Kiri: Daftar Session */}
+                <div style={{ borderRight: '1px solid #EEEEEE', overflowY: 'auto', maxHeight: '500px' }}>
+                  {manualSessions.map(sid => {
+                    const sessionMsgs = allMessages.filter(m => m.session_id === sid).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                    const lastMsg = sessionMsgs[sessionMsgs.length - 1]
+                    const isSelected = selectedSession === sid
+                    return (
+                      <div key={sid} onClick={() => setSelectedSession(sid)}
+                        style={{ padding: '16px', borderBottom: '1px solid #F5F5F5', cursor: 'pointer', backgroundColor: isSelected ? '#F5F3FF' : 'white', transition: 'background 0.2s' }}>
+                        <div style={{ fontWeight: 700, fontSize: '14px', color: isSelected ? '#7C3AED' : '#333' }}>
+                          Customer ({sid.slice(0, 12)}...)
+                        </div>
+                        {lastMsg && (
+                          <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {lastMsg.sender}: {lastMsg.text}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Kolom Kanan: Chat Window */}
+                <div style={{ display: 'flex', flexDirection: 'column', height: '500px' }}>
+                  {selectedSession ? (
+                    <>
+                      <div style={{ padding: '15px 20px', borderBottom: '1px solid #EEEEEE', backgroundColor: '#F9F8FF', fontWeight: 600, fontSize: '14px' }}>
+                        Chat dengan Customer ({selectedSession})
+                      </div>
+                      <div style={{ flexGrow: 1, padding: '20px', overflowY: 'auto', backgroundColor: '#F9F9F9', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {allMessages
+                          .filter(m => m.session_id === selectedSession)
+                          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                          .map(msg => (
+                            <div key={msg.id} style={{ display: 'flex', justifyContent: msg.sender === 'Customer' ? 'flex-end' : 'flex-start' }}>
+                              <div style={{ maxWidth: '70%' }}>
+                                <div style={{ fontSize: '11px', color: '#999', marginBottom: '2px', textAlign: msg.sender === 'Customer' ? 'right' : 'left' }}>
+                                  {msg.sender}
+                                </div>
+                                <div style={{
+                                  padding: '10px 14px',
+                                  borderRadius: '12px',
+                                  fontSize: '13px',
+                                  backgroundColor: msg.sender === 'Customer' ? '#7C3AED' : 'white',
+                                  color: msg.sender === 'Customer' ? 'white' : '#333',
+                                  border: msg.sender !== 'Customer' ? '1px solid #EEEEEE' : 'none',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                }}>
+                                  {msg.text}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      <div style={{ display: 'flex', padding: '12px', borderTop: '1px solid #EEEEEE', backgroundColor: 'white' }}>
+                        <input
+                          type="text"
+                          placeholder="Ketik balasan ke customer..."
+                          value={adminInput}
+                          onChange={(e) => setAdminInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAdminReply()}
+                          style={{ flexGrow: 1, border: '1px solid #EEEEEE', borderRadius: '8px', padding: '10px 14px', outline: 'none', fontFamily: 'inherit', fontSize: '14px' }}
+                        />
+                        <button onClick={handleAdminReply}
+                          style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#7C3AED', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
+                          Kirim
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '14px' }}>
+                      👈 Pilih percakapan customer di samping untuk mulai membalas
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
