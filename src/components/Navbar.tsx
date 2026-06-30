@@ -1,15 +1,16 @@
 "use client"
 import { useState, useRef, useEffect } from 'react'
 import { useThrift } from '@/context/ThriftContext'
+import { useRouter } from 'next/navigation'
 
 export default function Navbar() {
   const { cartCount, cartItems, removeFromCart, searchQuery, setSearchQuery, notifs, markAllRead, unreadCount } = useThrift()
+  const router = useRouter()
   const [showCart, setShowCart] = useState(false)
   const [showNotif, setShowNotif] = useState(false)
   const cartRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (cartRef.current && !cartRef.current.contains(e.target as Node)) setShowCart(false)
@@ -24,11 +25,8 @@ export default function Navbar() {
   return (
     <nav style={{ backgroundColor: 'white', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', position: 'sticky', top: 0, zIndex: 100 }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '70px' }}>
+        <a href="/" style={{ fontSize: '24px', fontWeight: 700, color: '#7C3AED', textDecoration: 'none', flexShrink: 0 }}>ThriftIn</a>
 
-        {/* Logo */}
-        <a href="#" style={{ fontSize: '24px', fontWeight: 700, color: '#7C3AED', textDecoration: 'none', flexShrink: 0 }}>ThriftIn</a>
-
-        {/* Search */}
         <div style={{ flexGrow: 1, maxWidth: '500px', margin: '0 20px', position: 'relative' }}>
           <input
             type="text"
@@ -40,8 +38,13 @@ export default function Navbar() {
           <i className="fas fa-search" style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', color: '#999' }}></i>
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+          {/* Orders link */}
+          <button onClick={() => router.push('/orders')}
+            style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Riwayat Order">
+            <i className="fas fa-receipt"></i>
+          </button>
 
           {/* CART */}
           <div ref={cartRef} style={{ position: 'relative' }}>
@@ -55,7 +58,6 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Cart Dropdown */}
             {showCart && (
               <div style={{ position: 'absolute', top: '50px', right: 0, width: '320px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', zIndex: 200, overflow: 'hidden' }}>
                 <div style={{ padding: '15px 20px', borderBottom: '1px solid #EEEEEE', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -90,7 +92,8 @@ export default function Navbar() {
                       <span style={{ fontSize: '14px', color: '#666' }}>Total</span>
                       <span style={{ fontWeight: 700, color: '#7C3AED', fontSize: '16px' }}>Rp {totalHarga.toLocaleString('id-ID')}</span>
                     </div>
-                    <button style={{ width: '100%', padding: '12px', background: '#7C3AED', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                    <button onClick={() => { setShowCart(false); router.push('/checkout') }}
+                      style={{ width: '100%', padding: '12px', background: '#7C3AED', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                       Checkout Sekarang
                     </button>
                   </div>
@@ -111,7 +114,6 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Notif Dropdown */}
             {showNotif && (
               <div style={{ position: 'absolute', top: '50px', right: 0, width: '300px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', zIndex: 200, overflow: 'hidden' }}>
                 <div style={{ padding: '15px 20px', borderBottom: '1px solid #EEEEEE' }}>
@@ -125,13 +127,9 @@ export default function Navbar() {
                     </div>
                   ))}
                 </div>
-                <div style={{ padding: '12px 20px', textAlign: 'center', borderTop: '1px solid #EEEEEE' }}>
-                  <span style={{ fontSize: '13px', color: '#7C3AED', fontWeight: 600, cursor: 'pointer' }}>Lihat semua notifikasi</span>
-                </div>
               </div>
             )}
           </div>
-
         </div>
       </div>
     </nav>
