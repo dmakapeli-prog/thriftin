@@ -1,8 +1,9 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Product } from '@/types'
 import { useThrift } from '@/context/ThriftContext'
 import { createOffer } from '@/lib/offers'
+import { addToWishlist, removeFromWishlist, isInWishlist } from '@/lib/wishlist'
 import { useRouter } from 'next/navigation'
 
 interface Props {
@@ -13,6 +14,7 @@ export default function ProductCard({ product }: Props) {
   const { addToCart, setCartCount, cartCount } = useThrift()
   const router = useRouter()
   const [wishlist, setWishlist] = useState(false)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [offerValue, setOfferValue] = useState('')
   const [offerName, setOfferName] = useState('')
@@ -20,6 +22,30 @@ export default function ProductCard({ product }: Props) {
   const [toastMsg, setToastMsg] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [offerDone, setOfferDone] = useState(false)
+
+  useEffect(() => {
+    isInWishlist(product.id).then(setWishlist)
+  }, [product.id])
+
+  async function handleToggleWishlist() {
+    setWishlistLoading(true)
+    try {
+      if (wishlist) {
+        await removeFromWishlist(product.id)
+        setWishlist(false)
+      } else {
+        await addToWishlist({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image
+        })
+        setWishlist(true)
+        showToastMsg('❤️ Ditambahkan ke wishlist!')
+      }
+    } catch { }
+    setWishlistLoading(false)
+  }
 
   function showToastMsg(msg: string) {
     setToastMsg(msg)
@@ -73,7 +99,7 @@ export default function ProductCard({ product }: Props) {
       >
         <div style={{ position: 'relative', height: '250px' }}>
           <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          <button onClick={() => setWishlist(!wishlist)} style={{ position: 'absolute', top: '10px', right: '10px', background: 'white', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', color: wishlist ? '#FF4D4F' : '#CCC', fontSize: '16px', cursor: 'pointer' }}>
+          <button onClick={handleToggleWishlist} disabled={wishlistLoading} style={{ position: 'absolute', top: '10px', right: '10px', background: 'white', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', color: wishlist ? '#FF4D4F' : '#CCC', fontSize: '16px', cursor: wishlistLoading ? 'wait' : 'pointer' }}>
             <i className={wishlist ? 'fas fa-heart' : 'far fa-heart'}></i>
           </button>
           <span style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(255,255,255,0.9)', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{product.condition}</span>

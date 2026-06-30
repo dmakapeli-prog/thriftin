@@ -40,6 +40,12 @@ export default function Navbar() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
+          {/* Wishlist link */}
+          <button onClick={() => router.push('/wishlist')}
+            style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Wishlist">
+            <i className="far fa-heart"></i>
+          </button>
+
           {/* Orders link */}
           <button onClick={() => router.push('/orders')}
             style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Riwayat Order">
