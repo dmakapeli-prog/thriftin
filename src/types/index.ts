@@ -7,4 +7,5 @@ export interface Product {
   condition: string
   rating: number
   category: string[]
+  product_type?: string
 }

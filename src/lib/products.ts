@@ -18,6 +18,7 @@ export async function createProduct(product: {
   rating: number
   category: string[]
   stok: number
+  product_type: string
 }) {
   const { data, error } = await supabase
     .from('products')
@@ -36,6 +37,7 @@ export async function updateProduct(id: number, product: {
   rating?: number
   category?: string[]
   stok?: number
+  product_type?: string
 }) {
   const { data, error } = await supabase
     .from('products')

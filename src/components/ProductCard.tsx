@@ -109,6 +109,19 @@ export default function ProductCard({ product }: Props) {
           <button onClick={handleToggleWishlist} disabled={wishlistLoading} style={{ position: 'absolute', top: '10px', right: '10px', background: 'white', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', color: wishlist ? '#FF4D4F' : '#CCC', fontSize: '16px', cursor: wishlistLoading ? 'wait' : 'pointer' }}>
             <i className={wishlist ? 'fas fa-heart' : 'far fa-heart'}></i>
           </button>
+          <span style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            background: product.product_type === 'Preloved' ? '#7C3AED' : '#4CAF50',
+            color: 'white',
+            padding: '4px 10px',
+            borderRadius: '6px',
+            fontSize: '10px',
+            fontWeight: 700
+          }}>
+            {product.product_type === 'Preloved' ? '✨ Preloved' : '♻️ Thrift'}
+          </span>
           <span style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(255,255,255,0.9)', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{product.condition}</span>
         </div>
         <div style={{ padding: '15px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>

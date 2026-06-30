@@ -15,10 +15,11 @@ interface Product {
   rating: number
   category: string[]
   stok: number
+  product_type?: string
 }
 
 export default function ProductGrid() {
-  const { activeFilter, searchQuery } = useThrift()
+  const { activeFilter, activeType, searchQuery } = useThrift()
   const [showChat, setShowChat] = useState(false)
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [filtered, setFiltered] = useState<Product[]>([])
@@ -40,6 +41,9 @@ export default function ProductGrid() {
 
   useEffect(() => {
     let result = [...allProducts]
+    if (activeType !== 'Semua Tipe') {
+      result = result.filter(p => p.product_type === activeType)
+    }
     if (activeFilter !== 'Semua' && activeFilter !== 'Harga') {
       result = result.filter(p => (p.category || []).includes(activeFilter))
     }
@@ -47,7 +51,7 @@ export default function ProductGrid() {
       result = result.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
     }
     setFiltered(result)
-  }, [activeFilter, searchQuery, allProducts])
+  }, [activeFilter, activeType, searchQuery, allProducts])
 
   return (
     <>
@@ -76,7 +80,8 @@ export default function ProductGrid() {
                   image: product.image_url,
                   condition: `Condition: ${product.condition}`,
                   rating: product.rating,
-                  category: product.category || []
+                  category: product.category || [],
+                  product_type: product.product_type || 'Thrift'
                 }}
               />
             ))

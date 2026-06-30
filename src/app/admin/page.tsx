@@ -16,6 +16,7 @@ interface Product {
   rating: number
   category: string[]
   stok: number
+  product_type?: string
 }
 
 const emptyForm = {
@@ -26,7 +27,8 @@ const emptyForm = {
   condition: 'Good',
   rating: 4.5,
   category: [] as string[],
-  stok: 1
+  stok: 1,
+  product_type: 'Thrift'
 }
 
 const categoryOptions = ['Pria', 'Wanita', 'Aksesoris', 'Merek']
@@ -190,7 +192,8 @@ export default function AdminPage() {
       condition: p.condition,
       rating: p.rating,
       category: p.category || [],
-      stok: p.stok
+      stok: p.stok,
+      product_type: p.product_type || 'Thrift'
     })
     setImagePreview(p.image_url)
     setImageFile(null)
@@ -353,7 +356,7 @@ export default function AdminPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#F9F8FF' }}>
-                        {['Foto', 'Nama Produk', 'Harga', 'Kondisi', 'Stok', 'Kategori', 'Aksi'].map(h => (
+                        {['Foto', 'Nama Produk', 'Harga', 'Kondisi', 'Tipe', 'Stok', 'Kategori', 'Aksi'].map(h => (
                           <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#666', borderBottom: '1px solid #EEEEEE' }}>{h}</th>
                         ))}
                       </tr>
@@ -371,6 +374,11 @@ export default function AdminPage() {
                           <td style={{ padding: '12px 16px', color: '#7C3AED', fontWeight: 700, fontSize: '14px' }}>{p.price}</td>
                           <td style={{ padding: '12px 16px' }}>
                             <span style={{ backgroundColor: '#EDE9FE', color: '#7C3AED', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>{p.condition}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ backgroundColor: p.product_type === 'Preloved' ? '#EDE9FE' : '#E8F5E9', color: p.product_type === 'Preloved' ? '#7C3AED' : '#4CAF50', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+                              {p.product_type === 'Preloved' ? '✨ Preloved' : '♻️ Thrift'}
+                            </span>
                           </td>
                           <td style={{ padding: '12px 16px' }}>
                             <span style={{ color: p.stok === 0 ? '#FF4D4F' : '#333', fontWeight: 600, fontSize: '14px' }}>{p.stok === 0 ? '⚠️ Habis' : p.stok}</span>
@@ -671,6 +679,28 @@ export default function AdminPage() {
                   <label style={{ fontSize: '14px', fontWeight: 600, color: '#333', display: 'block', marginBottom: '6px' }}>Stok</label>
                   <input type="number" min="0" value={form.stok} onChange={e => setForm(p => ({ ...p, stok: parseInt(e.target.value) || 0 }))}
                     style={{ width: '100%', padding: '12px', border: '1px solid #EEEEEE', borderRadius: '8px', outline: 'none', fontFamily: 'inherit', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '14px', fontWeight: 600, color: '#333', display: 'block', marginBottom: '8px' }}>Tipe Produk</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {['Thrift', 'Preloved'].map(type => (
+                    <button key={type} onClick={() => setForm(p => ({ ...p, product_type: type }))}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: form.product_type === type ? '2px solid #7C3AED' : '2px solid #EEEEEE',
+                        backgroundColor: form.product_type === type ? '#7C3AED' : 'white',
+                        color: form.product_type === type ? 'white' : '#666',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        cursor: 'pointer'
+                      }}>
+                      {type === 'Thrift' ? '♻️' : '✨'} {type}
+                    </button>
+                  ))}
                 </div>
               </div>
 

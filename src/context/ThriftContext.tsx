@@ -16,6 +16,8 @@ interface Notif {
 interface ThriftContextType {
   activeFilter: string
   setActiveFilter: (f: string) => void
+  activeType: string
+  setActiveType: (t: string) => void
   searchQuery: string
   setSearchQuery: (q: string) => void
   cartItems: CartItem[]
@@ -31,6 +33,7 @@ interface ThriftContextType {
 
 const ThriftContext = createContext<ThriftContextType>({
   activeFilter: 'Semua', setActiveFilter: () => {},
+  activeType: 'Semua Tipe', setActiveType: () => {},
   searchQuery: '', setSearchQuery: () => {},
   cartItems: [], setCartItems: () => {}, addToCart: () => {}, removeFromCart: () => {},
   cartCount: 0, setCartCount: () => {},
@@ -45,6 +48,7 @@ const defaultNotifs: Notif[] = [
 
 export function ThriftProvider({ children }: { children: ReactNode }) {
   const [activeFilter, setActiveFilter] = useState('Semua')
+  const [activeType, setActiveType] = useState('Semua Tipe')
   const [searchQuery, setSearchQuery] = useState('')
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [notifs, setNotifs] = useState<Notif[]>(defaultNotifs)
@@ -75,6 +79,7 @@ export function ThriftProvider({ children }: { children: ReactNode }) {
   return (
     <ThriftContext.Provider value={{
       activeFilter, setActiveFilter,
+      activeType, setActiveType,
       searchQuery, setSearchQuery,
       cartItems, setCartItems, addToCart, removeFromCart, cartCount, setCartCount,
       notifs, markAllRead, unreadCount
