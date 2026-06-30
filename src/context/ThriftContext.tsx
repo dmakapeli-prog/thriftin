@@ -19,9 +19,11 @@ interface ThriftContextType {
   searchQuery: string
   setSearchQuery: (q: string) => void
   cartItems: CartItem[]
+  setCartItems: (items: CartItem[] | ((prev: CartItem[]) => CartItem[])) => void
   addToCart: (product: Product) => void
   removeFromCart: (id: number) => void
   cartCount: number
+  setCartCount: (c: any) => void
   notifs: Notif[]
   markAllRead: () => void
   unreadCount: number
@@ -30,8 +32,8 @@ interface ThriftContextType {
 const ThriftContext = createContext<ThriftContextType>({
   activeFilter: 'Semua', setActiveFilter: () => {},
   searchQuery: '', setSearchQuery: () => {},
-  cartItems: [], addToCart: () => {}, removeFromCart: () => {},
-  cartCount: 0,
+  cartItems: [], setCartItems: () => {}, addToCart: () => {}, removeFromCart: () => {},
+  cartCount: 0, setCartCount: () => {},
   notifs: [], markAllRead: () => {}, unreadCount: 0
 })
 
@@ -63,6 +65,10 @@ export function ThriftProvider({ children }: { children: ReactNode }) {
     setNotifs(prev => prev.map(n => ({ ...n, read: true })))
   }
 
+  const setCartCount = (c: any) => {
+    if (c === 0) setCartItems([])
+  }
+
   const cartCount = cartItems.reduce((sum, i) => sum + i.qty, 0)
   const unreadCount = notifs.filter(n => !n.read).length
 
@@ -70,7 +76,7 @@ export function ThriftProvider({ children }: { children: ReactNode }) {
     <ThriftContext.Provider value={{
       activeFilter, setActiveFilter,
       searchQuery, setSearchQuery,
-      cartItems, addToCart, removeFromCart, cartCount,
+      cartItems, setCartItems, addToCart, removeFromCart, cartCount, setCartCount,
       notifs, markAllRead, unreadCount
     }}>
       {children}
