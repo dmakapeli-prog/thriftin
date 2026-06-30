@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { getOrders } from '@/lib/orders'
 import { useRouter } from 'next/navigation'
+import ChatBox from '@/components/ChatBox'
 
 interface Order {
   id: number
@@ -26,6 +27,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Order | null>(null)
+  const [showChat, setShowChat] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -127,6 +129,15 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+      <button
+        onClick={() => setShowChat(!showChat)}
+        style={{ position: 'fixed', bottom: '30px', right: '30px', backgroundColor: '#7C3AED', color: 'white', padding: '12px 20px', borderRadius: '25px', border: 'none', boxShadow: '0 4px 15px rgba(124,58,237,0.5)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', cursor: 'pointer', zIndex: 90 }}
+      >
+        <i className="fas fa-comment-dots"></i> Chat Penjual
+      </button>
+
+      <ChatBox isOpen={showChat} onClose={() => setShowChat(false)} />
     </div>
   )
 }

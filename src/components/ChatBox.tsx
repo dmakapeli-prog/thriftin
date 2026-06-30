@@ -36,19 +36,31 @@ export default function ChatBox({ isOpen, onClose }: Props) {
     async function load() {
       try {
         const data = await getMessages(sid!)
-        setMessages(data || [])
-        const lastManual = data?.filter(m => m.mode === 'manual')
-        if (lastManual && lastManual.length > 0) setChatMode('manual')
+        if (data) {
+          setMessages(data)
+          const lastManual = data.filter(m => m.mode === 'manual')
+          if (lastManual && lastManual.length > 0) setChatMode('manual')
+        }
       } catch { }
       setLoading(false)
     }
     load()
 
     const channel = subscribeMessages(sid, (newMsg) => {
-      setMessages(prev => [...prev, newMsg])
+      setMessages(prev => {
+        if (prev.some(m => m.id === newMsg.id)) return prev
+        return [...prev, newMsg]
+      })
     })
 
-    return () => { channel.unsubscribe() }
+    const interval = setInterval(() => {
+      load()
+    }, 2500)
+
+    return () => {
+      channel.unsubscribe()
+      clearInterval(interval)
+    }
   }, [isOpen])
 
   useEffect(() => {
@@ -61,24 +73,47 @@ export default function ChatBox({ isOpen, onClose }: Props) {
     setInput('')
 
     try {
-      await sendMessage('Customer', text, sessionId, chatMode)
+      const res = await sendMessage('Customer', text, sessionId, chatMode)
+      if (res && res[0]) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === res[0].id)) return prev
+          return [...prev, res[0]]
+        })
+      }
 
       if (chatMode === 'bot') {
         setTimeout(async () => {
           const reply = getBotReply(text)
-          await sendMessage('Bot', reply, sessionId, 'bot')
+          const botRes = await sendMessage('Bot', reply, sessionId, 'bot')
+          if (botRes && botRes[0]) {
+            setMessages(prev => {
+              if (prev.some(m => m.id === botRes[0].id)) return prev
+              return [...prev, botRes[0]]
+            })
+          }
         }, 800)
       }
-      // Kalau mode manual, tidak ada auto-reply, nunggu admin balas dari Admin Panel
     } catch { }
   }
 
   async function handleEskalasiAdmin() {
     setChatMode('manual')
     try {
-      await sendMessage('System', '🔔 Customer ingin chat langsung dengan penjual', sessionId, 'manual')
+      const sysRes = await sendMessage('System', '🔔 Customer ingin chat langsung dengan penjual', sessionId, 'manual')
+      if (sysRes && sysRes[0]) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === sysRes[0].id)) return prev
+          return [...prev, sysRes[0]]
+        })
+      }
       setTimeout(async () => {
-        await sendMessage('Penjual', 'Halo, saya penjual ThriftIn. Ada yang bisa saya bantu? 😊', sessionId, 'manual')
+        const pRes = await sendMessage('Penjual', 'Halo, saya penjual ThriftIn. Ada yang bisa saya bantu? 😊', sessionId, 'manual')
+        if (pRes && pRes[0]) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === pRes[0].id)) return prev
+            return [...prev, pRes[0]]
+          })
+        }
       }, 1000)
     } catch { }
   }

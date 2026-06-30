@@ -67,13 +67,27 @@ export default function AdminPage() {
     const globalChannel = supabase
       .channel('admin-all-messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
-        setAllMessages(prev => [...prev, payload.new])
+        setAllMessages(prev => {
+          if (prev.some(m => m.id === payload.new.id)) return prev
+          return [...prev, payload.new]
+        })
       })
       .subscribe()
+
+    const interval = setInterval(() => {
+      async function sync() {
+        try {
+          const data = await getAllSessions()
+          if (data) setAllMessages(data)
+        } catch {}
+      }
+      sync()
+    }, 2500)
 
     return () => {
       channel.unsubscribe()
       globalChannel.unsubscribe()
+      clearInterval(interval)
     }
   }, [])
 
@@ -119,9 +133,18 @@ export default function AdminPage() {
 
   async function handleAdminReply() {
     if (!adminInput.trim() || !selectedSession) return
+    const text = adminInput
+    setAdminInput('')
     try {
-      await sendMessage('Penjual', adminInput, selectedSession, 'manual')
-      setAdminInput('')
+      const res = await sendMessage('Penjual', text, selectedSession, 'manual')
+      if (res && res[0]) {
+        setAllMessages(prev => {
+          if (prev.some(m => m.id === res[0].id)) return prev
+          return [...prev, res[0]]
+        })
+      } else {
+        loadAllMessages()
+      }
     } catch { }
   }
 
