@@ -85,6 +85,13 @@ export default function OrdersPage() {
                   <div style={{ fontSize: '13px', color: '#666' }}>{order.items?.length} produk • {order.payment_method}</div>
                   <div style={{ fontWeight: 700, color: '#7C3AED', fontSize: '16px' }}>Rp {order.total.toLocaleString('id-ID')}</div>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); router.push(`/tracking/${order.id}`) }}
+                    style={{ padding: '6px 14px', backgroundColor: '#EDE9FE', color: '#7C3AED', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>
+                    📍 Lacak Pesanan
+                  </button>
+                </div>
               </div>
             ))}
           </div>
