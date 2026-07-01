@@ -5,6 +5,7 @@ import { getOrders, updateOrderStatus } from '@/lib/orders'
 import { getOffers, updateOfferStatus } from '@/lib/offers'
 import { getAllSessions, sendMessage, subscribeMessages } from '@/lib/messages'
 import { supabase } from '@/lib/supabase'
+import { createNotification } from '@/lib/notifications'
 
 interface Product {
   id: number
@@ -43,6 +44,10 @@ export default function AdminPage() {
   const [imagePreview, setImagePreview] = useState('')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+
+  const [showNotifForm, setShowNotifForm] = useState(false)
+  const [notifForm, setNotifForm] = useState({ title: '', message: '', type: 'info', session_id: '' })
+  const [sendingNotif, setSendingNotif] = useState(false)
 
   const [activeTab, setActiveTab] = useState<'produk' | 'pesanan' | 'tawaran' | 'chat'>('produk')
   const [orders, setOrders] = useState<any[]>([])
@@ -148,6 +153,28 @@ export default function AdminPage() {
         loadAllMessages()
       }
     } catch { }
+  }
+
+  async function handleSendNotif() {
+    if (!notifForm.title || !notifForm.message) {
+      showToast('Lengkapi judul dan pesan!')
+      return
+    }
+    setSendingNotif(true)
+    try {
+      if (notifForm.session_id) {
+        await createNotification(notifForm.session_id, notifForm.title, notifForm.message, notifForm.type)
+      } else {
+        const sessions = [...new Set(allMessages.map((m: any) => m.session_id).filter(Boolean))]
+        await Promise.all(sessions.map(sid => createNotification(sid, notifForm.title, notifForm.message, notifForm.type)))
+      }
+      showToast('✅ Notifikasi terkirim!')
+      setShowNotifForm(false)
+      setNotifForm({ title: '', message: '', type: 'info', session_id: '' })
+    } catch {
+      showToast('❌ Gagal kirim notifikasi!')
+    }
+    setSendingNotif(false)
   }
 
   function showToast(msg: string) {
@@ -282,10 +309,16 @@ export default function AdminPage() {
           <span style={{ color: 'white', opacity: 0.4 }}>|</span>
           <h1 style={{ color: 'white', fontSize: '20px', fontWeight: 700, margin: 0 }}>🛍️ Admin Panel ThriftIn</h1>
         </div>
-        <button
-          onClick={openAdd}
-          style={{ backgroundColor: 'white', color: '#7C3AED', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
-        >+ Tambah Produk</button>
+        <div>
+          <button onClick={() => setShowNotifForm(true)}
+            style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1.5px solid white', padding: '10px 16px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '14px', marginRight: '8px' }}>
+            🔔 Kirim Notifikasi
+          </button>
+          <button
+            onClick={openAdd}
+            style={{ backgroundColor: 'white', color: '#7C3AED', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
+          >+ Tambah Produk</button>
+        </div>
       </div>
 
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #EEEEEE', display: 'flex', gap: '4px', padding: '0 24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -737,6 +770,66 @@ export default function AdminPage() {
                 <button onClick={handleSave} disabled={saving}
                   style={{ flex: 2, padding: '12px', border: 'none', borderRadius: '8px', background: saving ? '#C4B5FD' : '#7C3AED', color: 'white', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
                   {saving ? 'Menyimpan...' : editId ? '💾 Simpan Perubahan' : '➕ Tambah Produk'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notif Form Modal */}
+      {showNotifForm && (
+        <div onClick={() => setShowNotifForm(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '460px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>🔔 Kirim Notifikasi</h2>
+              <button onClick={() => setShowNotifForm(false)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#999' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#333', display: 'block', marginBottom: '6px' }}>Tipe Notifikasi</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { key: 'info', label: 'ℹ️ Info' },
+                    { key: 'success', label: '✅ Sukses' },
+                    { key: 'warning', label: '⚠️ Peringatan' },
+                    { key: 'promo', label: '🎉 Promo' },
+                    { key: 'order', label: '📦 Order' }
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setNotifForm(p => ({ ...p, type: t.key }))}
+                      style={{ padding: '6px 12px', borderRadius: '6px', border: '1.5px solid', borderColor: notifForm.type === t.key ? '#7C3AED' : '#EEEEEE', backgroundColor: notifForm.type === t.key ? '#EDE9FE' : 'white', color: notifForm.type === t.key ? '#7C3AED' : '#666', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#333', display: 'block', marginBottom: '6px' }}>Judul</label>
+                <input value={notifForm.title} onChange={e => setNotifForm(p => ({ ...p, title: e.target.value }))}
+                  placeholder="contoh: Promo Akhir Tahun 🎉"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #EEEEEE', borderRadius: '8px', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#333', display: 'block', marginBottom: '6px' }}>Pesan</label>
+                <textarea value={notifForm.message} onChange={e => setNotifForm(p => ({ ...p, message: e.target.value }))} rows={3}
+                  placeholder="contoh: Dapatkan diskon 50% untuk semua produk thrift hari ini!"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #EEEEEE', borderRadius: '8px', outline: 'none', fontSize: '14px', boxSizing: 'border-box', resize: 'vertical' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#333', display: 'block', marginBottom: '6px' }}>Kirim ke (opsional)</label>
+                <input value={notifForm.session_id} onChange={e => setNotifForm(p => ({ ...p, session_id: e.target.value }))}
+                  placeholder="Session ID customer (kosongkan = kirim ke semua)"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #EEEEEE', borderRadius: '8px', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }} />
+                <p style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>💡 Kosongkan untuk kirim notifikasi ke semua customer yang pernah chat</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <button onClick={() => setShowNotifForm(false)}
+                  style={{ flex: 1, padding: '12px', border: '1.5px solid #EEEEEE', borderRadius: '8px', background: 'white', color: '#666', fontWeight: 600, cursor: 'pointer' }}>
+                  Batal
+                </button>
+                <button onClick={handleSendNotif} disabled={sendingNotif}
+                  style={{ flex: 2, padding: '12px', border: 'none', borderRadius: '8px', background: sendingNotif ? '#C4B5FD' : '#7C3AED', color: 'white', fontWeight: 700, cursor: sendingNotif ? 'not-allowed' : 'pointer' }}>
+                  {sendingNotif ? 'Mengirim...' : '🔔 Kirim Notifikasi'}
                 </button>
               </div>
             </div>

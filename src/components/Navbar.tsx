@@ -2,6 +2,23 @@
 import { useState, useRef, useEffect } from 'react'
 import { useThrift } from '@/context/ThriftContext'
 import { useRouter } from 'next/navigation'
+import { markNotifAsRead } from '@/lib/notifications'
+
+const notifTypeColor: Record<string, string> = {
+  'info': '#2196F3',
+  'success': '#4CAF50',
+  'warning': '#FFB800',
+  'promo': '#E91E63',
+  'order': '#7C3AED'
+}
+
+const notifTypeIcon: Record<string, string> = {
+  'info': 'ℹ️',
+  'success': '✅',
+  'warning': '⚠️',
+  'promo': '🎉',
+  'order': '📦'
+}
 
 export default function Navbar() {
   const { cartCount, cartItems, removeFromCart, searchQuery, setSearchQuery, notifs, markAllRead, unreadCount } = useThrift()
@@ -22,48 +39,49 @@ export default function Navbar() {
 
   const totalHarga = cartItems.reduce((sum, i) => sum + i.rawPrice * i.qty, 0)
 
+  async function handleOpenNotif() {
+    setShowNotif(!showNotif)
+    setShowCart(false)
+    if (!showNotif) await markAllRead()
+  }
+
+  async function handleClickNotif(notif: any) {
+    await markNotifAsRead(notif.id)
+    if (notif.type === 'order') router.push('/orders')
+  }
+
   return (
     <nav style={{ backgroundColor: 'white', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', position: 'sticky', top: 0, zIndex: 100 }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '70px' }}>
         <a href="/" style={{ fontSize: '24px', fontWeight: 700, color: '#7C3AED', textDecoration: 'none', flexShrink: 0 }}>ThriftIn</a>
 
         <div style={{ flexGrow: 1, maxWidth: '500px', margin: '0 20px', position: 'relative' }}>
-          <input
-            type="text"
-            placeholder="Cari pakaian preloved..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '10px 20px', paddingRight: '40px', border: '1px solid #EEEEEE', borderRadius: '20px', outline: 'none', backgroundColor: '#F5F5F5', fontFamily: 'inherit', fontSize: '14px' }}
-          />
+          <input type="text" placeholder="Cari pakaian preloved..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '10px 20px', paddingRight: '40px', border: '1px solid #EEEEEE', borderRadius: '20px', outline: 'none', backgroundColor: '#F5F5F5', fontFamily: 'inherit', fontSize: '14px' }} />
           <i className="fas fa-search" style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', color: '#999' }}></i>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 
-          {/* Wishlist link */}
-          <button onClick={() => router.push('/wishlist')}
-            style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Wishlist">
+          {/* Wishlist */}
+          <button onClick={() => router.push('/wishlist')} style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Wishlist">
             <i className="far fa-heart"></i>
           </button>
 
-          {/* Review link */}
-          <button onClick={() => router.push('/review')}
-            style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Beri Ulasan">
+          {/* Review */}
+          <button onClick={() => router.push('/review')} style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Beri Ulasan">
             <i className="far fa-star"></i>
           </button>
 
-          {/* Orders link */}
-          <button onClick={() => router.push('/orders')}
-            style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Riwayat Order">
+          {/* Orders */}
+          <button onClick={() => router.push('/orders')} style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', cursor: 'pointer', padding: '8px' }} title="Riwayat Order">
             <i className="fas fa-receipt"></i>
           </button>
 
           {/* CART */}
           <div ref={cartRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => { setShowCart(!showCart); setShowNotif(false) }}
-              style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', position: 'relative', cursor: 'pointer', padding: '8px' }}
-            >
+            <button onClick={() => { setShowCart(!showCart); setShowNotif(false) }}
+              style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', position: 'relative', cursor: 'pointer', padding: '8px' }}>
               <i className="fas fa-shopping-cart"></i>
               {cartCount > 0 && (
                 <span style={{ position: 'absolute', top: '2px', right: '2px', backgroundColor: '#FF4D4F', color: 'white', fontSize: '10px', fontWeight: 'bold', padding: '1px 5px', borderRadius: '10px', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
@@ -116,10 +134,8 @@ export default function Navbar() {
 
           {/* NOTIF */}
           <div ref={notifRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => { setShowNotif(!showNotif); setShowCart(false); if (!showNotif) markAllRead() }}
-              style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', position: 'relative', cursor: 'pointer', padding: '8px' }}
-            >
+            <button onClick={handleOpenNotif}
+              style={{ background: 'none', border: 'none', fontSize: '20px', color: '#333', position: 'relative', cursor: 'pointer', padding: '8px' }}>
               <i className="fas fa-bell"></i>
               {unreadCount > 0 && (
                 <span style={{ position: 'absolute', top: '2px', right: '2px', backgroundColor: '#FF4D4F', color: 'white', fontSize: '10px', fontWeight: 'bold', padding: '1px 5px', borderRadius: '10px', minWidth: '16px', textAlign: 'center' }}>{unreadCount}</span>
@@ -127,17 +143,33 @@ export default function Navbar() {
             </button>
 
             {showNotif && (
-              <div style={{ position: 'absolute', top: '50px', right: 0, width: '300px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', zIndex: 200, overflow: 'hidden' }}>
-                <div style={{ padding: '15px 20px', borderBottom: '1px solid #EEEEEE' }}>
+              <div style={{ position: 'absolute', top: '50px', right: 0, width: '320px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', zIndex: 200, overflow: 'hidden' }}>
+                <div style={{ padding: '15px 20px', borderBottom: '1px solid #EEEEEE', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, fontSize: '16px' }}>🔔 Notifikasi</span>
+                  <span style={{ fontSize: '12px', color: '#7C3AED', cursor: 'pointer', fontWeight: 600 }} onClick={markAllRead}>Tandai semua dibaca</span>
                 </div>
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                  {notifs.map(n => (
-                    <div key={n.id} style={{ padding: '14px 20px', borderBottom: '1px solid #F5F5F5', backgroundColor: n.read ? 'white' : '#F5F3FF', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '13px', color: '#333', fontWeight: n.read ? 400 : 600 }}>{n.text}</span>
-                      <span style={{ fontSize: '11px', color: '#999' }}>{n.time}</span>
+                <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                  {notifs.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: '#999' }}>
+                      <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔔</div>
+                      <p style={{ fontSize: '13px' }}>Belum ada notifikasi</p>
                     </div>
-                  ))}
+                  ) : (
+                    notifs.map(n => (
+                      <div key={n.id} onClick={() => handleClickNotif(n)}
+                        style={{ padding: '14px 20px', borderBottom: '1px solid #F5F5F5', backgroundColor: n.read ? 'white' : '#F5F3FF', cursor: 'pointer', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <div style={{ fontSize: '20px', flexShrink: 0 }}>{notifTypeIcon[n.type] || 'ℹ️'}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: n.read ? 500 : 700, color: '#333', marginBottom: '2px' }}>{n.title}</div>
+                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{n.message}</div>
+                          <div style={{ fontSize: '11px', color: '#999' }}>
+                            {new Date(n.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                        {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#7C3AED', flexShrink: 0, marginTop: '4px' }}></div>}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}

@@ -1,6 +1,7 @@
 "use client"
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { Product } from '@/types'
+import { getNotifications, markAllNotifsAsRead, subscribeNotifications } from '@/lib/notifications'
 
 interface CartItem extends Product {
   qty: number
@@ -8,9 +9,11 @@ interface CartItem extends Product {
 
 interface Notif {
   id: number
-  text: string
-  time: string
+  title: string
+  message: string
+  type: string
   read: boolean
+  created_at: string
 }
 
 interface ThriftContextType {
@@ -21,11 +24,10 @@ interface ThriftContextType {
   searchQuery: string
   setSearchQuery: (q: string) => void
   cartItems: CartItem[]
-  setCartItems: (items: CartItem[] | ((prev: CartItem[]) => CartItem[])) => void
   addToCart: (product: Product) => void
   removeFromCart: (id: number) => void
+  setCartCount: (count: number) => void
   cartCount: number
-  setCartCount: (c: any) => void
   notifs: Notif[]
   markAllRead: () => void
   unreadCount: number
@@ -35,23 +37,38 @@ const ThriftContext = createContext<ThriftContextType>({
   activeFilter: 'Semua', setActiveFilter: () => {},
   activeType: 'Semua Tipe', setActiveType: () => {},
   searchQuery: '', setSearchQuery: () => {},
-  cartItems: [], setCartItems: () => {}, addToCart: () => {}, removeFromCart: () => {},
-  cartCount: 0, setCartCount: () => {},
+  cartItems: [], addToCart: () => {}, removeFromCart: () => {}, setCartCount: () => {},
+  cartCount: 0,
   notifs: [], markAllRead: () => {}, unreadCount: 0
 })
-
-const defaultNotifs: Notif[] = [
-  { id: 1, text: '🛍️ Pesanan kamu sedang diproses!', time: '2 menit lalu', read: false },
-  { id: 2, text: '❤️ Produk wishlist kamu hampir habis!', time: '1 jam lalu', read: false },
-  { id: 3, text: '🔴 Live shopping dimulai sekarang!', time: '3 jam lalu', read: true },
-]
 
 export function ThriftProvider({ children }: { children: ReactNode }) {
   const [activeFilter, setActiveFilter] = useState('Semua')
   const [activeType, setActiveType] = useState('Semua Tipe')
   const [searchQuery, setSearchQuery] = useState('')
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [notifs, setNotifs] = useState<Notif[]>(defaultNotifs)
+  const [notifs, setNotifs] = useState<Notif[]>([])
+
+  useEffect(() => {
+    // Load notifikasi dari Supabase
+    getNotifications().then(data => setNotifs(data || []))
+
+    // Subscribe realtime
+    const channel = subscribeNotifications((newNotif) => {
+      setNotifs(prev => [newNotif, ...prev])
+      // Tampilkan browser notification kalau ada permission
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(newNotif.title, { body: newNotif.message })
+      }
+    })
+
+    // Minta permission browser notification
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    return () => { channel.unsubscribe() }
+  }, [])
 
   const addToCart = (product: Product) => {
     setCartItems(prev => {
@@ -65,12 +82,13 @@ export function ThriftProvider({ children }: { children: ReactNode }) {
     setCartItems(prev => prev.filter(i => i.id !== id))
   }
 
-  const markAllRead = () => {
-    setNotifs(prev => prev.map(n => ({ ...n, read: true })))
+  const setCartCount = (count: number) => {
+    if (count === 0) setCartItems([])
   }
 
-  const setCartCount = (c: any) => {
-    if (c === 0) setCartItems([])
+  const markAllRead = async () => {
+    await markAllNotifsAsRead()
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })))
   }
 
   const cartCount = cartItems.reduce((sum, i) => sum + i.qty, 0)
@@ -81,7 +99,7 @@ export function ThriftProvider({ children }: { children: ReactNode }) {
       activeFilter, setActiveFilter,
       activeType, setActiveType,
       searchQuery, setSearchQuery,
-      cartItems, setCartItems, addToCart, removeFromCart, cartCount, setCartCount,
+      cartItems, addToCart, removeFromCart, setCartCount, cartCount,
       notifs, markAllRead, unreadCount
     }}>
       {children}
